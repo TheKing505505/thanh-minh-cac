@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thanh Minh Các - Shop Cày Thuê Blox Fruits</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBgZncJBGRrJI1DobylcIwiS1CHXvbDjQo",
+    authDomain: "thanh-minh-cac.firebaseapp.com",
+    projectId: "thanh-minh-cac",
+    storageBucket: "thanh-minh-cac.firebasestorage.app",
+    messagingSenderId: "872838076122",
+    appId: "1:872838076122:web:1d4b5f6839c4fbcb61f7e3",
+    measurementId: "G-F69HJQRJEF"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
 <style>
   :root {
     --gold: #f0c040;
@@ -1047,41 +1063,38 @@
 <div class="msg-tooltip">💬 Liên hệ hỗ trợ</div>
 
 <script>
-  // ── CONSTANTS ──
-  const OWNER_PASSWORD = 'tmcshop2024'; // Mật khẩu chủ shop - tự đổi
-
-  // ── STATE ──
+  const OWNER_PASSWORD = 'tmcshop2024';
   let currentOrder = {};
-  let orders = JSON.parse(localStorage.getItem('tmc_orders') || '[]');
+  let orders = [];
   let users = JSON.parse(localStorage.getItem('tmc_users') || '[]');
   let currentUser = JSON.parse(localStorage.getItem('tmc_current_user') || 'null');
   let ownerLoggedIn = false;
   let currentNotifyOrder = null;
   let currentFilter = 'all';
 
-  // ── TAB SWITCHING ──
+  // Load orders từ Firebase
+  async function loadOrders() {
+    try {
+      const snap = await db.collection('orders').orderBy('createdAt', 'desc').get();
+      orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) { orders = []; }
+  }
+
   function switchTab(tab) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     event.target.classList.add('active');
-    if (tab === 'history') renderHistory();
-    if (tab === 'account') renderAccount();
+    if (tab === 'history') { loadOrders().then(renderHistory); }
+    if (tab === 'account') { loadOrders().then(renderAccount); }
     if (tab === 'shopowner') renderOwnerPanel();
   }
 
-  function toggleCat(header) {
-    header.parentElement.classList.toggle('open');
-  }
+  function toggleCat(header) { header.parentElement.classList.toggle('open'); }
 
-  // ── ORDER MODAL ──
   function openOrder(btn) {
     const item = btn.closest('.service-item');
-    currentOrder = {
-      name: item.dataset.name,
-      price: item.dataset.price,
-      code: item.dataset.code,
-    };
+    currentOrder = { name: item.dataset.name, price: item.dataset.price, code: item.dataset.code };
     document.getElementById('modal-package-name').textContent = currentOrder.name;
     document.getElementById('modal-service-code').textContent = currentOrder.code;
     document.getElementById('modal-price').textContent = currentOrder.price;
@@ -1091,34 +1104,27 @@
     document.getElementById('orderModal').classList.add('open');
   }
 
-  function closeModal() {
-    document.getElementById('orderModal').classList.remove('open');
-  }
+  function closeModal() { document.getElementById('orderModal').classList.remove('open'); }
 
   document.getElementById('orderModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
 
   function generateOrderId() {
-    const ts = Date.now().toString().slice(-6);
-    const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return 'DH-' + ts + rand;
+    return 'DH-' + Date.now().toString().slice(-6) + Math.floor(Math.random()*1000).toString().padStart(3,'0');
   }
 
-  function submitOrder() {
+  async function submitOrder() {
     const account = document.getElementById('inp-account').value.trim();
     const password = document.getElementById('inp-password').value.trim();
-    if (!account || !password) {
-      alert('Vui lòng điền đầy đủ tài khoản và mật khẩu!');
-      return;
-    }
+    if (!account || !password) { alert('Vui lòng điền đầy đủ tài khoản và mật khẩu!'); return; }
+    const orderId = generateOrderId();
     const order = {
-      id: generateOrderId(),
+      id: orderId,
       serviceCode: currentOrder.code,
       serviceName: currentOrder.name,
       price: currentOrder.price,
-      account,
-      password,
+      account, password,
       note: document.getElementById('inp-note').value.trim(),
       time: new Date().toLocaleString('vi-VN'),
       isVip: currentOrder.code.startsWith('S'),
@@ -1126,19 +1132,20 @@
       owner: currentUser ? currentUser.username : null,
       doneTime: null,
       doneMessage: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    orders.unshift(order);
-    localStorage.setItem('tmc_orders', JSON.stringify(orders));
-
-    // Lưu vào session nếu chưa đăng nhập
-    if (!currentUser) {
-      const sessionIds = JSON.parse(sessionStorage.getItem('tmc_session_orders') || '[]');
-      sessionIds.push(order.id);
-      sessionStorage.setItem('tmc_session_orders', JSON.stringify(sessionIds));
-    }
-
-    closeModal();
-    showToast('✅ Đặt đơn thành công! Mã đơn: ' + order.id);
+    try {
+      await db.collection('orders').doc(orderId).set(order);
+      // Lưu session nếu chưa đăng nhập
+      if (!currentUser) {
+        const sessionIds = JSON.parse(sessionStorage.getItem('tmc_session_orders') || '[]');
+        sessionIds.push(orderId);
+        sessionStorage.setItem('tmc_session_orders', JSON.stringify(sessionIds));
+      }
+      orders.unshift(order);
+      closeModal();
+      showToast('✅ Đặt đơn thành công! Mã đơn: ' + orderId);
+    } catch(e) { alert('Lỗi khi đặt đơn, thử lại!'); }
   }
 
   function showToast(msg) {
@@ -1148,33 +1155,20 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  function deleteOrder(id) {
-    if (!confirm('Xóa đơn hàng này?')) return;
-    orders = orders.filter(o => o.id !== id);
-    localStorage.setItem('tmc_orders', JSON.stringify(orders));
-    renderHistory();
-  }
-
   // ── HISTORY ──
   function renderHistory() {
     const el = document.getElementById('history-list');
-
-    // Lọc đơn theo người dùng hiện tại
     let myOrders = [];
     if (currentUser) {
-      // Đã đăng nhập: chỉ thấy đơn của mình
       myOrders = orders.filter(o => o.owner === currentUser.username);
     } else {
-      // Chưa đăng nhập: chỉ thấy đơn trong phiên này (sessionStorage)
       const sessionIds = JSON.parse(sessionStorage.getItem('tmc_session_orders') || '[]');
       myOrders = orders.filter(o => sessionIds.includes(o.id));
     }
-
     if (myOrders.length === 0) {
-      el.innerHTML = `<div class="history-empty"><div class="icon">📋</div><div>${currentUser ? 'Bạn chưa có đơn hàng nào.' : 'Chưa có đơn nào trong phiên này.<br><small style="font-size:0.8rem">Đăng nhập để xem lại đơn cũ.</small>'}</div></div>`;
+      el.innerHTML = `<div class="history-empty"><div class="icon">📋</div><div>${currentUser ? 'Bạn chưa có đơn hàng nào.' : 'Chưa có đơn nào trong phiên này.<br><small>Đăng nhập để xem lại đơn cũ.</small>'}</div></div>`;
       return;
     }
-
     el.innerHTML = myOrders.map(o => `
       <div class="order-card ${o.isVip ? 'vip-order' : ''}">
         <div class="order-top">
@@ -1233,7 +1227,7 @@
     currentUser = user;
     localStorage.setItem('tmc_current_user', JSON.stringify(user));
     err.textContent = '';
-    renderAccount();
+    loadOrders().then(renderAccount);
     showToast('👋 Xin chào ' + username + '!');
   }
 
@@ -1249,7 +1243,6 @@
       document.getElementById('profile-box').style.display = 'block';
       document.getElementById('profile-name-display').textContent = '👤 ' + currentUser.username;
       document.getElementById('profile-contact-display').textContent = currentUser.contact ? '📞 ' + currentUser.contact : 'Chưa có thông tin liên hệ';
-      // Show my orders
       const myOrders = orders.filter(o => o.owner === currentUser.username);
       const el = document.getElementById('my-orders-list');
       if (myOrders.length === 0) {
@@ -1279,10 +1272,8 @@
       ownerLoggedIn = true;
       document.getElementById('owner-lock').style.display = 'none';
       document.getElementById('owner-panel').style.display = 'block';
-      renderOwnerOrders('all');
-    } else {
-      err.textContent = 'Mật khẩu không đúng!';
-    }
+      loadOrders().then(() => renderOwnerOrders('all'));
+    } else { err.textContent = 'Mật khẩu không đúng!'; }
   }
 
   function ownerLogout() {
@@ -1294,7 +1285,7 @@
   }
 
   function renderOwnerPanel() {
-    if (ownerLoggedIn) renderOwnerOrders(currentFilter);
+    if (ownerLoggedIn) loadOrders().then(() => renderOwnerOrders(currentFilter));
   }
 
   function filterOrders(filter, btn) {
@@ -1339,30 +1330,38 @@
     `).join('');
   }
 
-  function markDone(id) {
-    const idx = orders.findIndex(o => o.id === id);
-    if (idx === -1) return;
-    orders[idx].status = 'done';
-    orders[idx].doneTime = new Date().toLocaleString('vi-VN');
-    orders[idx].doneMessage = `🎉 Đơn hàng ${id} của bạn đã hoàn thành!\n✅ Dịch vụ: ${orders[idx].serviceName}\n⏰ Hoàn thành lúc: ${orders[idx].doneTime}\nCảm ơn bạn đã tin tưởng Thanh Minh Các! 🐉`;
-    localStorage.setItem('tmc_orders', JSON.stringify(orders));
-    renderOwnerOrders(currentFilter);
-    showToast('✅ Đã đánh dấu xong đơn ' + id);
+  async function markDone(id) {
+    const doneTime = new Date().toLocaleString('vi-VN');
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    const doneMessage = `🎉 Đơn hàng ${id} của bạn đã hoàn thành!
+✅ Dịch vụ: ${o.serviceName}
+⏰ Hoàn thành lúc: ${doneTime}
+Cảm ơn bạn đã tin tưởng Thanh Minh Các! 🐉`;
+    try {
+      await db.collection('orders').doc(id).update({ status: 'done', doneTime, doneMessage });
+      const idx = orders.findIndex(x => x.id === id);
+      if (idx !== -1) { orders[idx].status = 'done'; orders[idx].doneTime = doneTime; orders[idx].doneMessage = doneMessage; }
+      renderOwnerOrders(currentFilter);
+      showToast('✅ Đã đánh dấu xong đơn ' + id);
+    } catch(e) { alert('Lỗi cập nhật!'); }
   }
 
   function openNotify(id) {
     const o = orders.find(x => x.id === id);
     if (!o) return;
     currentNotifyOrder = o;
-    const msg = o.doneMessage || `📢 Cập nhật đơn hàng của bạn!\n🆔 Mã đơn: ${o.id}\n📦 Dịch vụ: ${o.serviceName}\n⏳ Trạng thái: ${o.status === 'done' ? '✅ Đã hoàn thành' : '🔄 Đang tiến hành'}\nMọi thắc mắc liên hệ Thanh Minh Các!`;
+    const msg = o.doneMessage || `📢 Cập nhật đơn hàng của bạn!
+🆔 Mã đơn: ${o.id}
+📦 Dịch vụ: ${o.serviceName}
+⏳ Trạng thái: ${o.status === 'done' ? '✅ Đã hoàn thành' : '🔄 Đang tiến hành'}
+Mọi thắc mắc liên hệ Thanh Minh Các!`;
     document.getElementById('notify-preview-text').textContent = msg;
     document.getElementById('notify-fb-link').href = 'https://www.facebook.com/profile.php?id=61585785807233';
     document.getElementById('notifyModal').classList.add('open');
   }
 
-  function closeNotifyModal() {
-    document.getElementById('notifyModal').classList.remove('open');
-  }
+  function closeNotifyModal() { document.getElementById('notifyModal').classList.remove('open'); }
 
   document.getElementById('notifyModal').addEventListener('click', function(e) {
     if (e.target === this) closeNotifyModal();
@@ -1374,7 +1373,6 @@
       showToast('📋 Đã copy tin nhắn!');
       closeNotifyModal();
     }).catch(() => {
-      // fallback
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta);
       ta.select(); document.execCommand('copy');
