@@ -255,6 +255,12 @@
         .dh-hoa-than { background:linear-gradient(135deg,#ff6b9d,#ec4899); color:#fff; }
         .dh-hop-the { background:linear-gradient(135deg,#ffd700,#f59e0b); color:#000; }
         .dh-dai-de { background:linear-gradient(135deg,#ff4757,#c44dff,#ffd700); color:#fff; }
+        .img-upload-wrap { position:relative; }
+        .img-upload-wrap input[type=file] { display:none; }
+        .img-upload-btn { display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:8px; border:1px dashed rgba(196,77,255,0.4); background:rgba(196,77,255,0.06); color:rgba(240,230,255,0.7); cursor:pointer; font-size:0.82rem; font-family:'Quicksand',sans-serif; font-weight:600; transition:all 0.2s; width:100%; margin-bottom:6px; }
+        .img-upload-btn:hover { border-color:var(--purple); color:var(--accent); background:rgba(196,77,255,0.12); }
+        .img-preview { width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:8px; border:1px solid rgba(196,77,255,0.2); display:none; }
+        .img-or-divider { text-align:center; font-size:0.75rem; color:rgba(240,230,255,0.3); margin:4px 0; }
         @media(max-width:600px) {
             .header-actions .btn-nav span { display:none; }
             .services-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
@@ -405,7 +411,14 @@
         </div>
       </div>
       <label class="modal-label">Mô tả</label><input class="admin-input" id="newSvcDesc" placeholder="Mô tả ngắn">
-      <label class="modal-label">URL Ảnh (tuỳ chọn)</label><input class="admin-input" id="newSvcImage" placeholder="https://...">
+      <label class="modal-label">Ảnh Dịch Vụ (tuỳ chọn)</label>
+      <div class="img-upload-wrap">
+        <img id="newSvcPreview" class="img-preview">
+        <label class="img-upload-btn" for="newSvcFile">📁 Chọn ảnh từ máy</label>
+        <input type="file" id="newSvcFile" accept="image/*" onchange="handleImgUpload('newSvcFile','newSvcImage','newSvcPreview')">
+        <div class="img-or-divider">— hoặc dán URL —</div>
+        <input class="admin-input" id="newSvcImage" placeholder="https://..." oninput="previewFromUrl('newSvcImage','newSvcPreview')">
+      </div>
       <button class="btn-add-svc" onclick="addNewService()">➕ Thêm Dịch Vụ</button>
     </div>
     <div id="adminServiceList"></div>
@@ -509,7 +522,14 @@
         </select>
       </div>
     </div>
-    <label class="modal-label">URL Ảnh</label><input class="modal-input" id="editSvcImage" placeholder="https://...">
+    <label class="modal-label">Ảnh Dịch Vụ</label>
+    <div class="img-upload-wrap">
+      <img id="editSvcPreview" class="img-preview">
+      <label class="img-upload-btn" for="editSvcFile">📁 Chọn ảnh từ máy</label>
+      <input type="file" id="editSvcFile" accept="image/*" onchange="handleImgUpload('editSvcFile','editSvcImage','editSvcPreview')">
+      <div class="img-or-divider">— hoặc dán URL —</div>
+      <input class="modal-input" id="editSvcImage" placeholder="https://..." oninput="previewFromUrl('editSvcImage','editSvcPreview')">
+    </div>
     <button class="btn-modal-submit" onclick="saveEditService()">💾 Lưu</button>
   </div>
 </div>
@@ -1284,6 +1304,10 @@ function openEditSvc(id) {
     document.getElementById('editSvcCategory').value=svc.category;
     document.getElementById('editSvcBadge').value=svc.badge;
     document.getElementById('editSvcImage').value=svc.image||'';
+    // Show preview if image exists
+    const preview = document.getElementById('editSvcPreview');
+    if(svc.image) { preview.src=svc.image; preview.style.display='block'; }
+    else { preview.style.display='none'; }
     openModal('editSvcModal');
 }
 
@@ -1310,6 +1334,36 @@ function deleteSvc(id) {
     saveServices(services.filter(s=>s.id!==id));
     renderAdminServices();renderServices();renderVipSection();
     showNotif(`Đã xóa${svc?': '+svc.name:''}`,'info');
+}
+
+// ============================================================
+// ===== IMAGE UPLOAD =====
+// ============================================================
+function handleImgUpload(fileInputId, urlInputId, previewId) {
+    const file = document.getElementById(fileInputId).files[0];
+    if (!file) return;
+    if (file.size > 800000) { showNotif('Ảnh quá lớn! Chọn ảnh dưới 800KB','error'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        document.getElementById(urlInputId).value = base64;
+        const preview = document.getElementById(previewId);
+        preview.src = base64;
+        preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function previewFromUrl(urlInputId, previewId) {
+    const url = document.getElementById(urlInputId).value.trim();
+    const preview = document.getElementById(previewId);
+    if (url && url.startsWith('http')) {
+        preview.src = url;
+        preview.style.display = 'block';
+        preview.onerror = () => { preview.style.display = 'none'; };
+    } else {
+        preview.style.display = 'none';
+    }
 }
 
 // ============================================================
