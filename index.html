@@ -7,23 +7,33 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBgZncJBGRrJI1DobylcIwiS1CHXvbDjQo",
-            authDomain: "thanh-minh-cac.firebaseapp.com",
-            projectId: "thanh-minh-cac",
-            storageBucket: "thanh-minh-cac.firebasestorage.app",
-            messagingSenderId: "872838076122",
-            appId: "1:872838076122:web:1d4b5f6839c4fbcb61f7e3"
-        };
-        let db;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            db.settings({ experimentalForceLongPolling: true, merge: true });
-        } catch(e) {
-            console.error('Firebase init failed:', e);
-            db = null;
-        }
+        // Firebase init — chạy ngay sau khi 2 script trên load xong (blocking = đúng thứ tự)
+        let db = null;
+        (function initFirebase() {
+            try {
+                if (typeof firebase === 'undefined') {
+                    console.error('Firebase SDK chưa load!');
+                    return;
+                }
+                // Tránh khởi tạo 2 lần nếu app đã tồn tại
+                if (!firebase.apps.length) {
+                    firebase.initializeApp({
+                        apiKey: "AIzaSyBgZncJBGRrJI1DobylcIwiS1CHXvbDjQo",
+                        authDomain: "thanh-minh-cac.firebaseapp.com",
+                        projectId: "thanh-minh-cac",
+                        storageBucket: "thanh-minh-cac.firebasestorage.app",
+                        messagingSenderId: "872838076122",
+                        appId: "1:872838076122:web:1d4b5f6839c4fbcb61f7e3"
+                    });
+                }
+                db = firebase.firestore();
+                db.settings({ experimentalForceLongPolling: true, merge: true });
+                console.log('✅ Firebase init OK');
+            } catch(e) {
+                console.error('Firebase init failed:', e.message);
+                db = null;
+            }
+        })();
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700;900&family=Quicksand:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Montserrat:wght@600;700;800;900&display=swap');
@@ -2281,7 +2291,12 @@ function switchAdminTab(tab,btn){
 }
 
 async function loadAdminData(){
+    // Force đọc từ Firestore, không dùng cache
+    _useLocalStorage=false;
+    _usersCache=null;
+    console.log('loadAdminData: db=',!!db,'_useLocalStorage=',_useLocalStorage);
     const [orders,users]=await Promise.all([getOrdersFromDB(),getUsersFromDB()]);
+    console.log('loadAdminData result: orders=',orders.length,'users=',users.length);
     renderAdminOrders(orders);
     renderAdminUsers(users);
     renderAdminServices();
@@ -3565,6 +3580,23 @@ async function setAllOutOfStock(){
 // ===== INIT =====
 // ============================================================
 (async function(){
+    // Nếu db=null (Firebase chưa load), thử init lại tối đa 3 lần
+    if(!db){
+        for(let i=0;i<3;i++){
+            await new Promise(r=>setTimeout(r,1000));
+            if(typeof firebase!=='undefined' && !db){
+                try{
+                    if(!firebase.apps.length) firebase.initializeApp({apiKey:"AIzaSyBgZncJBGRrJI1DobylcIwiS1CHXvbDjQo",authDomain:"thanh-minh-cac.firebaseapp.com",projectId:"thanh-minh-cac",storageBucket:"thanh-minh-cac.firebasestorage.app",messagingSenderId:"872838076122",appId:"1:872838076122:web:1d4b5f6839c4fbcb61f7e3"});
+                    db=firebase.firestore();
+                    db.settings({experimentalForceLongPolling:true,merge:true});
+                    console.log('✅ Firebase retry init OK (attempt '+(i+1)+')');
+                    break;
+                }catch(err){console.warn('Firebase retry '+(i+1)+' failed:',err.message);}
+            }
+            if(db) break;
+        }
+    }
+
     const session=loadSession();
     if(session){
         if(session.role==='admin'){currentUser=session;}
@@ -3572,7 +3604,6 @@ async function setAllOutOfStock(){
             try{
                 const user=await findUserInDB(session.username);
                 if(user)currentUser={username:user.username,role:'user'};
-                // nếu không tìm được vẫn giữ session
             }catch(e){currentUser=session;}
         }
     }
@@ -3582,12 +3613,8 @@ async function setAllOutOfStock(){
     loadSocialProof();
     loadTopNap();
     renderTitleShopGrid();
-    // Khởi động listener sau khi db sẵn sàng
     if(db){
         startFruitStockListener();
-    } else {
-        // db null → thử lại sau 2s (Firebase CDN load chậm)
-        setTimeout(()=>{ if(db) startFruitStockListener(); }, 2000);
     }
 })();
 </script>
