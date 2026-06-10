@@ -12,23 +12,24 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 // =========================================================================
-// CODE BẢO MẬT ADMIN FIX ĐƠ: AN TOÀN TUYỆT ĐỐI - TÍNH NĂNG MƯỢT MÀ
+// BẢO MẬT ĐỈNH CAO: KHÔNG LO ĐƠ NÚT - CHẶN HACKER TUYỆT ĐỐI
 // =========================================================================
-// Đợi HTML load xong hoàn toàn rồi mới kiểm tra quyền
-document.addEventListener("DOMContentLoaded", () => {
-  onAuthStateChanged(auth, (user) => {
-    const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
-    
-    if (!user || user.uid !== ADMIN_UID) {
-      // Hacker: Bị trục xuất thẳng cánh
-      window.location.href = "index.html";
-    } else {
-      // Admin thật: Gỡ bỏ lệnh ẩn của CSS, mọi tính năng nút bấm giữ nguyên 100%
-      document.body.style.setProperty("display", "block", "important");
-      console.log("Welcome Admin! Thần thức hoạt động, nút bấm mượt mà.");
-    }
-  });
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+onAuthStateChanged(auth, (user) => {
+  const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
+  
+  if (!user || user.uid !== ADMIN_UID) {
+    // Nếu là hacker: Trục xuất ngay lập tức
+    window.location.href = "index.html";
+  } else {
+    // Nếu là Admin thật: Hiện hình giao diện và mở khóa nút bấm chạy tanh tách!
+    document.body.style.setProperty("opacity", "1", "important");
+    document.body.style.setProperty("pointer-events", "auto", "important");
+    console.log("Welcome Admin! Giao diện đã mở khóa hoàn toàn.");
+  }
 });
+// =========================================================================
 // =========================================================================
 // =========================================================================
 // =========================================================================
