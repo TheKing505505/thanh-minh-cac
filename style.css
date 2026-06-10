@@ -446,6 +446,17 @@ main { padding-top: 80px; }
 @keyframes hopTheSweepBorder { 0%{background-position:0%} 100%{background-position:200%} }
 .dh-card.tier-6:hover { transform: translateY(-10px) scale(1.03); box-shadow: var(--vip-glow); }
 .dh-card.tier-6 .dh-card-name { color: #ffd700; }
+.dh-card.tier-6 .dh-card-name span { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+.dh-card.tier-6 .dh-card-icon { filter: drop-shadow(0 0 6px gold); }
+.dh-card.tier-6::before { display: none; }
+.dh-card.tier-7::before,
+.dh-card.tier-8::before { display: none; }
+.dh-card.banner-card { overflow: visible; margin-top: 4px; }
+.dh-card.banner-card .dh-card-btn { display: inline-block; }
+@media (max-width: 480px) {
+  .dh-card.banner-card { flex-direction: column; text-align: center; }
+  .dh-card.banner-card .dh-card-body { width: 100%; }
+}
 
 /* Đại Thừa */
 @keyframes daiThuaGlow {
@@ -1011,6 +1022,11 @@ footer span { color:var(--pink); }
 .expiry-urgent-text   { color:#ff9040; animation:urgentPulse 1.5s infinite; }
 .expiry-expired-text  { color:#ff4444; }
 .expiry-ok-text       { color:#4ade80; }
+.btn-renew            { display:inline-block; padding:8px 20px; border-radius:20px; border:none; cursor:pointer; font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.82rem; transition:all 0.2s; }
+.btn-renew-early      { background:linear-gradient(135deg,#4ade80,#22c55e); color:#000; }
+.btn-renew-normal     { background:linear-gradient(135deg,var(--pink),var(--purple)); color:#fff; }
+.btn-renew-full       { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:rgba(240,230,255,0.7); }
+.btn-renew:hover      { opacity:0.85; transform:scale(1.04); }
 
 /* Code admin */
 .code-item { background:var(--bg-card); border:1px solid rgba(196,77,255,0.2); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
@@ -1032,8 +1048,10 @@ footer span { color:var(--pink); }
   .dh-card.banner-card .dh-card-body { width: 100%; }
 
   /* Row 2 danh hiệu: Luyện Hư + Hợp Thể + Đại Thừa → 2 cột, Hợp Thể lên đầu */
-  #titleRow2 { grid-template-columns: 1fr 1fr !important; }
-  #titleRow2 .title-featured { grid-column: 1 / -1; order: -1; }
+  #titleRow2,
+  .title-row2-responsive { grid-template-columns: 1fr 1fr !important; }
+  #titleRow2 .title-featured,
+  .title-row2-responsive .title-featured { grid-column: 1 / -1; order: -1; }
 }
 
 @media (max-width: 600px) {
@@ -1054,5 +1072,6 @@ footer span { color:var(--pink); }
 }
 
 @media (max-width: 380px) {
-  #titleRow2 { grid-template-columns: 1fr !important; }
+  #titleRow2,
+  .title-row2-responsive { grid-template-columns: 1fr !important; }
 }
