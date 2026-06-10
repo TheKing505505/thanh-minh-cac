@@ -23,7 +23,69 @@ import {
   updateDoc, deleteDoc, query, where, orderBy,
   onSnapshot, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// =========================================================================
+// CẦU NỐI BẢO HIỂM: Sửa lỗi ReferenceError (showNotif và cardValue/cardDenom)
+// =========================================================================
 
+// 1. Đồng bộ hàm hiển thị thông báo cũ sang hàm showNotification mới
+window.showNotif = function(message, type) {
+  if (typeof showNotification === 'function') {
+    showNotification(message, type);
+  } else {
+    alert(message);
+  }
+};
+
+// 2. Hàm nạp thẻ cào chuẩn Modular SDK v10 (Đã fix lỗi cardValue / cardDenom)
+window.submitCard = async function() {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotif("Đại hiệp vui lòng đăng nhập trước khi nạp thẻ!", "error");
+    return;
+  }
+
+  // Thu thập dữ liệu từ giao diện (hỗ trợ cả ID cũ cardDenom và ID mới cardValue)
+  const cardType  = document.getElementById("cardType")?.value || "VIETTEL";
+  const cardCode  = document.getElementById("cardCode")?.value.trim();
+  const cardSeri  = document.getElementById("cardSeri")?.value.trim();
+  const cardValue = document.getElementById("cardValue")?.value || document.getElementById("cardDenom")?.value || "10000";
+
+  if (!cardCode || !cardSeri) {
+    showNotif("Vui lòng nhập đầy đủ Mã thẻ và Số Seri!", "error");
+    return;
+  }
+
+  // Đổi trạng thái nút bấm để tránh user click spam liên tục
+  const btn = document.querySelector("button[onclick='submitCard()']");
+  if (btn) { btn.disabled = true; btn.innerText = "ĐANG GỬI THỂ..."; }
+
+  try {
+    // Đẩy thông tin thẻ vào collection "cards" trên Firestore của bạn
+    await addDoc(collection(db, "cards"), {
+      uid: user.uid,
+      username: user.displayName || "Thành viên",
+      type: cardType,
+      declaredValue: Number(cardValue),
+      code: cardCode,
+      seri: cardSeri,
+      status: "pending", // Trạng thái chờ duyệt
+      createdAt: new Date().toISOString()
+    });
+
+    showNotif("🎉 Gửi thẻ thành công! Vui lòng chờ Admin kiểm tra và duyệt.", "success");
+    
+    // Xóa trắng các ô nhập liệu sau khi gửi thành công
+    if (document.getElementById("cardCode")) document.getElementById("cardCode").value = "";
+    if (document.getElementById("cardSeri")) document.getElementById("cardSeri").value = "";
+
+  } catch (error) {
+    console.error("Lỗi gửi thẻ:", error);
+    showNotif("Hệ thống lỗi, không thể gửi thẻ: " + error.message, "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = "NẠP THẺ TỰ ĐỘNG"; }
+  }
+};
+// =========================================================================
 // ============================================================
 // ===== HẰNG SỐ CẤU HÌNH =====================================
 // ============================================================
