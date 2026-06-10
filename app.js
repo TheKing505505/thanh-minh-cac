@@ -31,7 +31,7 @@ const ADMIN_UID          = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
 const TITLE_DURATION_MS  = 30 * 24 * 60 * 60 * 1000;
 
 // Fix #4: domain email fallback hợp lệ với Firebase Auth
-const FALLBACK_EMAIL_DOMAIN = "tmccaythue.com";
+const FALLBACK_EMAIL_DOMAIN = "ThanhMinhCustomer.com";
 
 const TITLES = [
   { id:"luyen-khi",  name:"Luyện Khí",   price:0,      cls:"dh-luyen-khi",  icon:"🟦", discount:0,  minOrder:0,      permanent:true, free:true,   desc:"Mặc định cho mọi khách — không có ưu đãi" },
