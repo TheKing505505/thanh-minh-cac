@@ -5,6 +5,7 @@
  */
 
 import { db, auth }  from "./firebase-config.js";
+import { DH_LOGOS }  from "./title-logos.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -282,13 +283,20 @@ async function handleRegister() {
   if (pass.length < 6)                      return showErr("Mật khẩu ít nhất 6 ký tự!");
   if (pass !== pass2)                       return showErr("Mật khẩu nhập lại không khớp!");
 
-  // Tạo email nội bộ nếu người dùng không nhập email thật
-  const authEmail = emailInput || `${username.toLowerCase().replace(/\s+/g, "_")}@tmc.internal`;
-
   const btn = document.getElementById("regSubmitBtn");
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Đang đăng ký..."; }
 
   try {
+    // Kiểm tra trùng tên đăng nhập trước khi tạo tài khoản Auth
+    const dupSnap = await getDocs(query(collection(db, "users"), where("username", "==", username)));
+    if (!dupSnap.empty) {
+      showErr("Tên đăng nhập đã tồn tại! Vui lòng chọn tên khác.");
+      return;
+    }
+
+    // Tạo email nội bộ nếu người dùng không nhập email thật
+    const authEmail = emailInput || `${username.toLowerCase().replace(/\s+/g, "_")}@tmc.internal`;
+
     // Tạo tài khoản Firebase Auth
     const credential = await createUserWithEmailAndPassword(auth, authEmail, pass);
     const uid = credential.user.uid;
@@ -350,13 +358,15 @@ async function handleLogin() {
     let loginEmail = usernameInput;
 
     // Nếu người dùng nhập tên (không phải email) → tra email từ Firestore
+    let displayName = usernameInput;
+
     if (!usernameInput.includes("@")) {
       const snap = await getDocs(query(collection(db, "users"), where("username", "==", usernameInput)));
       if (snap.empty) {
-        // Thử email nội bộ tạo tự động
         loginEmail = `${usernameInput.toLowerCase().replace(/\s+/g, "_")}@tmc.internal`;
       } else {
         const userData = snap.docs[0].data();
+        displayName = userData.username || usernameInput;
         loginEmail = userData.email && userData.email.includes("@") && !userData.email.includes("@tmc.internal")
           ? userData.email
           : `${usernameInput.toLowerCase().replace(/\s+/g, "_")}@tmc.internal`;
@@ -365,7 +375,16 @@ async function handleLogin() {
 
     await signInWithEmailAndPassword(auth, loginEmail, pass);
     closeModal("loginModal");
-    // onAuthStateChanged sẽ cập nhật UI sau khi đăng nhập thành công
+    ["loginUser", "loginPass"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    if (auth.currentUser?.uid) {
+      const prof = await getDoc(doc(db, "users", auth.currentUser.uid));
+      if (prof.exists()) displayName = prof.data().username || displayName;
+    }
+    if (auth.currentUser?.uid === ADMIN_UID) {
+      showNotif("🔥 Chào Thanh Minh Các Chủ!", "success");
+    } else {
+      showNotif(`👋 Chào ${displayName}! 🎮`, "success");
+    }
 
   } catch (err) {
     if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
@@ -479,7 +498,7 @@ function showAdmin() {
   if (!isAdmin()) return;
   hideAllPanels();
   document.getElementById("adminPanel")?.classList.add("show");
-  loadAdminData();
+  if (typeof window.loadAdminData === "function") window.loadAdminData();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function showCardPanel() {
@@ -489,8 +508,12 @@ function showCardPanel() {
   loadCardHistory();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-// Expose
-["showHome","showHistory","showProfile","showAdmin","showCardPanel"].forEach(fn => window[fn] = eval(fn));
+// Expose cho onclick trong HTML
+window.showHome      = showHome;
+window.showHistory   = showHistory;
+window.showProfile   = showProfile;
+window.showAdmin     = showAdmin;
+window.showCardPanel = showCardPanel;
 
 // ============================================================
 // ===== VIDEO SETTING ========================================
@@ -800,8 +823,11 @@ function getRenewalInfo(userData, titleId) {
   const expiry = userData.titleExpiry || 0;
   const now    = Date.now();
   const DAY3   = 3 * 24 * 60 * 60 * 1000;
-  if (!expiry)         return { type: "new",   pct: 100 };
-  if (now < expiry)    return { type: "early", pct: 40  };
+  if (!expiry) return { type: "new", pct: 100 };
+  if (now < expiry) {
+    if (expiry - now <= DAY3) return { type: "grace", pct: 50 };
+    return { type: "early", pct: 40 };
+  }
   if (now < expiry + DAY3) return { type: "grace", pct: 50 };
   return { type: "full", pct: 100 };
 }
@@ -902,6 +928,8 @@ async function renderProfile() {
     ${buildExpiryHtml(user, title, status)}
   `;
 
+  renderProfileExpiryBox(user);
+
   // Ô bổ sung thông tin liên hệ
   const suppEl = document.getElementById("profileContactSupp");
   if (suppEl) {
@@ -931,6 +959,58 @@ async function renderProfile() {
             ${o.doneMessage ? `<div class="hc-done-msg">${o.doneMessage}</div>` : ""}
           </div>`).join("");
   }
+}
+
+function renderProfileExpiryBox(user) {
+  const expiryEl = document.getElementById("profileExpiryBox");
+  if (!expiryEl) return;
+
+  const tid = user?.titleOverride;
+  const t   = tid ? TITLES.find(x => x.id === tid) : null;
+  if (!t || t.adminOnly || t.free || tid === "luyen-khi") {
+    expiryEl.innerHTML = "";
+    return;
+  }
+
+  const expiry = user.titleExpiry || 0;
+  const now    = Date.now();
+  const remain = expiry - now;
+  const days   = Math.ceil(remain / 86400000);
+  const DAY3   = 3 * 24 * 60 * 60 * 1000;
+  const renewPrice40 = Math.round(t.price * 0.4);
+  const renewPrice50 = Math.round(t.price * 0.5);
+
+  let boxClass = "title-expiry-box";
+  let countdownHtml = "";
+  let renewHtml = "";
+
+  if (remain > 0) {
+    if (remain <= DAY3) {
+      boxClass += " title-expiry-urgent";
+      countdownHtml = `<div class="expiry-countdown expiry-urgent-text">⚠️ Còn ${days} ngày hết hạn!</div>`;
+      renewHtml = `<div style="font-size:0.72rem;color:rgba(240,230,255,.5);margin-bottom:8px">Gia hạn ngay giá <strong style="color:#ff9040">50%</strong> = ${formatPrice(renewPrice50)} (tiết kiệm ${formatPrice(t.price - renewPrice50)})</div><button class="btn-renew btn-renew-normal" onclick="openBuyTitle('${t.id}')">🔄 Gia Hạn Ngay</button>`;
+    } else {
+      countdownHtml = `<div class="expiry-countdown expiry-ok-text">✅ Còn ${days} ngày</div>`;
+      renewHtml = `<div style="font-size:0.72rem;color:rgba(240,230,255,.5);margin-bottom:8px">Gia hạn sớm giá <strong style="color:#4ade80">40%</strong> = ${formatPrice(renewPrice40)} (tiết kiệm ${formatPrice(t.price - renewPrice40)})</div><button class="btn-renew btn-renew-early" onclick="openBuyTitle('${t.id}')">💚 Gia Hạn Sớm (-40%)</button>`;
+    }
+  } else {
+    const overDays = Math.floor(-remain / 86400000);
+    if (-remain <= DAY3) {
+      boxClass += " title-expiry-urgent";
+      countdownHtml = `<div class="expiry-countdown expiry-urgent-text">⏰ Hết hạn ${overDays > 0 ? overDays + " ngày trước" : "hôm nay"}!</div>`;
+      renewHtml = `<div style="font-size:0.72rem;color:rgba(240,230,255,.5);margin-bottom:8px">Gia hạn trong cửa sổ 3 ngày giá <strong style="color:#ff9040">50%</strong> = ${formatPrice(renewPrice50)}</div><button class="btn-renew btn-renew-normal" onclick="openBuyTitle('${t.id}')">🔄 Gia Hạn (50%)</button>`;
+    } else {
+      boxClass += " title-expiry-expired";
+      countdownHtml = `<div class="expiry-countdown expiry-expired-text">❌ Hết hạn ${overDays} ngày trước</div>`;
+      renewHtml = `<div style="font-size:0.72rem;color:rgba(240,230,255,.5);margin-bottom:8px">Cửa sổ gia hạn đã đóng — phải mua lại giá gốc ${formatPrice(t.price)}</div><button class="btn-renew btn-renew-full" onclick="openBuyTitle('${t.id}')">🛒 Mua Lại Full Giá</button>`;
+    }
+  }
+
+  expiryEl.innerHTML = `<div class="${boxClass}">
+    <div style="font-size:0.72rem;color:rgba(240,230,255,.45);margin-bottom:4px">⏱ HIỆU LỰC DANH HIỆU</div>
+    ${countdownHtml}
+    <div style="margin-top:10px">${renewHtml}</div>
+  </div>`;
 }
 
 function buildExpiryHtml(user, t, status) {
@@ -994,19 +1074,23 @@ async function openBuyTitle(titleId) {
 
   const user     = currentUserData;
   const balance  = user?.balance || 0;
-  const ri       = getRenewalInfo(user, titleId);
+  const ri         = getRenewalInfo(user, titleId);
   const finalPrice = Math.round(t.price * ri.pct / 100);
 
   if (balance < finalPrice) {
     showNotif(`❌ Số dư không đủ! Cần ${formatPrice(finalPrice)}, bạn có ${formatPrice(balance)}.`, "error");
     return;
   }
-  const label = ri.type === "early"
-    ? `Gia hạn sớm 40%: ${formatPrice(finalPrice)}`
-    : ri.type === "grace"
-    ? `Gia hạn 50%: ${formatPrice(finalPrice)}`
-    : `Mua ${t.name}: ${formatPrice(finalPrice)}`;
-  if (!confirm(`🛒 ${label}\nSố dư còn lại: ${formatPrice(balance - finalPrice)}`)) return;
+
+  let confirmMsg;
+  if (ri.type === "early") {
+    confirmMsg = `🔄 Gia hạn sớm "${t.name}"\n💚 Giá ưu đãi 40%: ${formatPrice(finalPrice)} (tiết kiệm ${formatPrice(t.price - finalPrice)})\nSố dư còn lại: ${formatPrice(balance - finalPrice)}`;
+  } else if (ri.type === "grace") {
+    confirmMsg = `🔄 Gia hạn "${t.name}"\n✨ Giá gia hạn 50%: ${formatPrice(finalPrice)} (tiết kiệm ${formatPrice(t.price - finalPrice)})\nSố dư còn lại: ${formatPrice(balance - finalPrice)}`;
+  } else {
+    confirmMsg = `🛒 Mua "${t.icon} ${t.name}"\nGiá: ${formatPrice(finalPrice)}\nSố dư còn lại: ${formatPrice(balance - finalPrice)}`;
+  }
+  if (!confirm(confirmMsg)) return;
 
   try {
     await updateDoc(doc(db, "users", currentUser.uid), { balance: balance - finalPrice });
@@ -1237,6 +1321,10 @@ function updateFruitPanelHeader() {
 // ============================================================
 // ===== DANH HIỆU GRID (SHOP) ================================
 // ============================================================
+function titleLogo(t) {
+  return DH_LOGOS[t.id] || `<span style="font-size:2rem">${t.icon}</span>`;
+}
+
 function renderTitleShopGrid() {
   const row1 = document.getElementById("titleRow1");
   const row2 = document.getElementById("titleRow2");
@@ -1248,46 +1336,50 @@ function renderTitleShopGrid() {
 
   const cardHtml = (t, tierCls, extraCls = "", extraStyle = "") => {
     const isFree = t.free || t.price === 0;
+    const renewHint = !isFree
+      ? `<div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(t.price * 0.4))}</span> · Hết ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(t.price * 0.5))}</span></div>`
+      : "";
     return `<div class="dh-card ${tierCls} ${extraCls}" style="${extraStyle}" onclick="openBuyTitle('${t.id}')">
-      <div class="dh-card-logo">${t.icon}</div>
+      <div class="dh-card-logo">${titleLogo(t)}</div>
       <div class="dh-card-name"><span class="${t.cls}" style="padding:2px 8px;border-radius:8px;display:inline-block">${t.name}</span></div>
       <div class="dh-card-price">${isFree ? `<span style="color:var(--green);font-size:0.78rem;font-family:Quicksand,sans-serif">Mặc định</span>` : formatPrice(t.price)}</div>
-      ${!isFree ? `<div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(t.price * 0.4))}</span> · Hết ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(t.price * 0.5))}</span></div>` : ""}
+      ${renewHint}
       <div class="dh-card-perk">${t.desc}${t.discount > 0 && t.discount < 100 ? `<br><span class="hl">✨ -${t.discount}% đơn ≥${formatPrice(t.minOrder)}</span>` : ""}</div>
       <div class="dh-card-btn">${isFree ? "Đã có" : "Mua Ngay →"}</div>
     </div>`;
   };
 
+  const bannerHtml = t => `<div class="dh-card tier-8 banner-card" onclick="openBuyTitle('${t.id}')">
+    <div class="dh-card-logo" style="width:72px;height:72px;flex-shrink:0;margin:0">${titleLogo(t)}</div>
+    <div class="dh-card-body">
+      <div class="dh-card-name"><span class="${t.cls}" style="padding:2px 10px;border-radius:8px;display:inline-block">${t.name}</span></div>
+      <div class="dh-card-price">${formatPrice(t.price)}</div>
+      <div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(t.price * 0.4))}</span> · Hết ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(t.price * 0.5))}</span></div>
+      <div class="dh-card-perk" style="font-size:0.72rem">${t.desc}<br><span class="hl">✨ Giảm ${t.discount}% đơn ≥${formatPrice(t.minOrder)}</span></div>
+    </div>
+    <div style="flex-shrink:0"><div class="dh-card-btn" style="padding:9px 22px;font-size:0.8rem">Mua Ngay →</div></div>
+  </div>`;
+
   // ROW 1: Luyện Khí → Hoá Thần (5 card nhỏ)
-  row1.innerHTML = [T[0],T[1],T[2],T[3],T[4]].map((t, i) => cardHtml(t, tiers[i])).join("");
+  row1.innerHTML = [T[0], T[1], T[2], T[3], T[4]].map((t, i) => cardHtml(t, tiers[i])).join("");
 
   // ROW 2: Luyện Hư | Hợp Thể (featured) | Đại Thừa
-  const hopThe  = T[6];
   const luyenHu = T[5];
+  const hopThe  = T[6];
   const daiThua = T[7];
   row2.innerHTML = cardHtml(luyenHu, "tier-5b")
-    + `<div class="dh-card tier-6 featured-card title-featured" onclick="openBuyTitle('${hopThe.id}')">
-        <div class="dh-card-logo" style="width:80px;height:80px;margin:0 auto 12px">${hopThe.icon}</div>
-        <div class="dh-card-name"><span class="${hopThe.cls}" style="padding:2px 10px;border-radius:8px;display:inline-block">${hopThe.name}</span></div>
-        <div class="dh-card-price">${formatPrice(hopThe.price)}</div>
-        <div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(hopThe.price*0.4))}</span> · ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(hopThe.price*0.5))}</span></div>
+    + `<div class="dh-card tier-6 featured-card title-featured" onclick="openBuyTitle('${hopThe.id}')" style="position:relative;overflow:visible">
+        <div class="dh-card-logo" style="width:80px;height:80px;margin:0 auto 12px">${titleLogo(hopThe)}</div>
+        <div class="dh-card-name" style="font-size:1.05rem"><span class="${hopThe.cls}" style="padding:2px 10px;border-radius:8px;display:inline-block">${hopThe.name}</span></div>
+        <div class="dh-card-price" style="font-size:1rem">${formatPrice(hopThe.price)}</div>
+        <div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(hopThe.price * 0.4))}</span> · ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(hopThe.price * 0.5))}</span></div>
         <div class="dh-card-perk">${hopThe.desc}<br><span class="hl">✨ -${hopThe.discount}% đơn ≥${formatPrice(hopThe.minOrder)}</span></div>
         <div class="dh-card-btn" style="padding:9px 22px">Mua Ngay →</div>
       </div>`
     + cardHtml(daiThua, "tier-7");
 
   // ROW 3: Độ Kiếp – banner ngang
-  const doKiep = T[8];
-  row3.innerHTML = `<div class="dh-card tier-8 banner-card" onclick="openBuyTitle('${doKiep.id}')">
-    <div class="dh-card-logo" style="width:72px;height:72px;flex-shrink:0;margin:0">${doKiep.icon}</div>
-    <div class="dh-card-body">
-      <div class="dh-card-name"><span class="${doKiep.cls}" style="padding:2px 10px;border-radius:8px;display:inline-block">${doKiep.name}</span></div>
-      <div class="dh-card-price">${formatPrice(doKiep.price)}</div>
-      <div style="font-size:0.62rem;color:rgba(240,230,255,0.3);margin-bottom:6px">GH sớm: <span style="color:var(--accent)">${formatPrice(Math.round(doKiep.price*0.4))}</span> · ≤3 ngày: <span style="color:var(--gold)">${formatPrice(Math.round(doKiep.price*0.5))}</span></div>
-      <div class="dh-card-perk">${doKiep.desc}<br><span class="hl">✨ Giảm ${doKiep.discount}% đơn ≥${formatPrice(doKiep.minOrder)}</span></div>
-    </div>
-    <div style="flex-shrink:0"><div class="dh-card-btn" style="padding:9px 22px;font-size:0.8rem">Mua Ngay →</div></div>
-  </div>`;
+  row3.innerHTML = bannerHtml(T[8]);
 }
 
 // ============================================================
@@ -1376,6 +1468,11 @@ document.addEventListener("keydown", e => {
 // ============================================================
 window.openModal  = openModal;
 window.closeModal = closeModal;
+window.renderServices    = renderServices;
+window.applyVideoSetting = applyVideoSetting;
+// Dùng chung với admin.js (tránh logic getServices bị lệch)
+window.__tmcGetServices         = getServices;
+window.__tmcGetCustomCategories = getCustomCategories;
 
 // ============================================================
 // ===== INIT =================================================
