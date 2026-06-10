@@ -24,7 +24,7 @@ import {
 
 // UID của tài khoản admin (lấy từ Firebase Auth Console sau khi tạo lần đầu)
 // ⚠️  Thay bằng UID thật trước khi deploy
-const ADMIN_UID = dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1;
+const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
 
 // Thời hạn danh hiệu: 30 ngày tính bằng milliseconds
 const TITLE_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
