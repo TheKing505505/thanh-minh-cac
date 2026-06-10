@@ -11,7 +11,25 @@ import {
   updateDoc, deleteDoc, query, where, orderBy, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
+// =========================================================================
+// CODE BẢO MẬT: CHẶN TRUY CẬP ADMIN (ĐẶT NGAY DƯỚI DÒNG IMPORT)
+// =========================================================================
+onAuthStateChanged(auth, (user) => {
+  const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
+  
+  if (!user || user.uid !== ADMIN_UID) {
+    // 1. Xóa sạch màn hình ngay lập tức để không lộ bất kỳ chữ nào của trang Admin
+    document.body.innerHTML = `<h1 style="color:white; text-align:center; margin-top:20%; font-family:sans-serif;">🔒 ĐANG CHUYỂN HƯỚNG...</h1>`;
+    
+    // 2. Đá văng kẻ mạo danh về trang chủ sau 0.3 giây
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 300);
+  } else {
+    console.log("Welcome Admin! Thần thức kết nối thành công.");
+  }
+});
+// =========================================================================
 // ============================================================
 // ===== HẰNG SỐ =============================================
 // ============================================================
