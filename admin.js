@@ -10,40 +10,6 @@ import {
   collection, doc, getDoc, getDocs, setDoc, addDoc,
   updateDoc, deleteDoc, query, where, orderBy, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-// =========================================================================
-// HOÀN HẢO: BẢO MẬT KHÔNG ĐƠ NÚT (HỢP NHẤT LOCK CHƠI TRÊN DOM)
-// =========================================================================
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-// Lưu lại toàn bộ giao diện gốc của Admin vào bộ nhớ ngầm
-const originalAdminHTML = document.body.innerHTML;
-
-// Xóa sạch màn hình ngay lập tức để hacker không kịp nhìn thấy gì
-document.body.innerHTML = `<div style="background:#1a0a2e; color:#f0e6ff; text-align:center; padding-top:20vh; height:100vh; font-family:sans-serif;"><h2>🔒 ĐANG XÁC THỰC QUYỀN ADMIN...</h2></div>`;
-
-onAuthStateChanged(auth, (user) => {
-  const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
-  
-  if (!user || user.uid !== ADMIN_UID) {
-    // Kẻ giả mạo: Đá văng ngay lập tức
-    window.location.href = "index.html";
-  } else {
-    // Admin thật: Trả lại toàn bộ giao diện gốc nguyên vẹn
-    document.body.innerHTML = originalAdminHTML;
-    console.log("Xác thực Admin thành công. Hệ thống chuẩn bị kích hoạt...");
-    
-    // ĐOẠN QUAN TRỌNG: Bạn tìm xem các hàm tải dữ liệu cũ trong admin.js tên là gì 
-    // (Ví dụ: loadCards(), renderThongKe(),...) thì gọi nó chạy ở ngay dưới đây:
-    if (typeof loadCards === "function") loadCards();
-    if (typeof loadOrders === "function") loadOrders();
-    // Khởi chạy lại các sự kiện thiết lập nút bấm nếu có...
-  }
-});
-// =========================================================================
-// =========================================================================
-// =========================================================================
-// =========================================================================
-// =========================================================================
 // ============================================================
 // ===== HẰNG SỐ =============================================
 // ============================================================
