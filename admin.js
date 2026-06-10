@@ -18,7 +18,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/f
 
 // UID admin – phải khớp với Firebase Auth Console
 // ⚠️  Thay bằng UID thật sau khi tạo tài khoản admin lần đầu
-const ADMIN_UID = "REPLACE_WITH_YOUR_ADMIN_UID";
+const ADMIN_UID = dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1;
 
 const TITLE_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
