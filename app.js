@@ -613,7 +613,6 @@ function showAdmin() {
   if (typeof window.loadAdminData === "function") window.loadAdminData();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-function showCardPanel() {
   if (!currentUser || isAdmin()) { showNotif("Đăng nhập để nạp thẻ", "error"); return; }
   hideAllPanels();
   document.getElementById("cardPanel")?.classList.add("show");
