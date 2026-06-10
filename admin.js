@@ -59,7 +59,8 @@ let _addCoinCurrent       = 0;
  * Nếu UID không khớp → ném lỗi, ngăn mọi thao tác.
  */
 function guardAdmin() {
-  if (!_adminUser || _adminUser.uid !== ADMIN_UID) {
+  const user = _adminUser || auth.currentUser;
+  if (!user || user.uid !== ADMIN_UID) {
     throw new Error("UNAUTHORIZED: Không có quyền admin.");
   }
 }
@@ -68,6 +69,7 @@ function guardAdmin() {
 // ===== TIỆN ÍCH ============================================
 // ============================================================
 const formatPrice = p => new Intl.NumberFormat("vi-VN").format(p) + "đ";
+const escAttr = s => String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 let _notifTimer = null;
 function showNotif(msg, type = "success") {
@@ -85,12 +87,14 @@ function openModal(id)  { document.getElementById(id)?.classList.add("show"); }
 function closeModal(id) { document.getElementById(id)?.classList.remove("show"); }
 
 function getServices() {
+  if (typeof window.__tmcGetServices === "function") return window.__tmcGetServices();
   const raw = localStorage.getItem("tmc_services");
   return raw ? JSON.parse(raw) : [];
 }
 function saveServices(svcs) { localStorage.setItem("tmc_services", JSON.stringify(svcs)); }
 
 function getCustomCategories() {
+  if (typeof window.__tmcGetCustomCategories === "function") return window.__tmcGetCustomCategories();
   const raw = localStorage.getItem("tmc_categories");
   return raw ? JSON.parse(raw) : [];
 }
@@ -148,16 +152,25 @@ onAuthStateChanged(auth, user => {
 // ===== LOAD DỮ LIỆU ADMIN ==================================
 // ============================================================
 async function loadAdminData() {
-  guardAdmin();
-  const [ordersSnap, usersSnap] = await Promise.all([
-    getDocs(query(collection(db, "orders"), orderBy("timestamp", "desc"))),
-    getDocs(collection(db, "users"))
-  ]);
-  const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const users  = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderAdminOrders(orders);
-  renderAdminUsers(users);
-  renderAdminServices();
+  try {
+    guardAdmin();
+  } catch {
+    showNotif("Không có quyền admin!", "error");
+    return;
+  }
+  try {
+    const [ordersSnap, usersSnap] = await Promise.all([
+      getDocs(query(collection(db, "orders"), orderBy("timestamp", "desc"))),
+      getDocs(collection(db, "users"))
+    ]);
+    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const users  = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAdminOrders(orders);
+    renderAdminUsers(users);
+    renderAdminServices();
+  } catch {
+    showNotif("Không tải được dữ liệu admin!", "error");
+  }
 }
 window.loadAdminData = loadAdminData;
 
@@ -165,7 +178,12 @@ window.loadAdminData = loadAdminData;
 // ===== TABS ================================================
 // ============================================================
 function switchAdminTab(tab, btn) {
-  guardAdmin();
+  try {
+    guardAdmin();
+  } catch {
+    showNotif("Không có quyền admin!", "error");
+    return;
+  }
   document.querySelectorAll(".admin-tab").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".admin-section").forEach(s => s.classList.remove("show"));
   btn.classList.add("active");
@@ -330,9 +348,9 @@ function renderAdminUsers(users) {
         <div class="user-balance">💰 Số dư: ${formatPrice(u.balance || 0)}</div>
       </div>
       <div class="user-item-actions">
-        <button class="btn-grant-title" onclick="openGrantTitle('${u.id}','${u.username}')">🏆 Cấp Danh Hiệu</button>
-        <button class="btn-add-coin"    onclick="openAddCoin('${u.id}','${u.username}')">💰 Bơm Tiền</button>
-        <button class="btn-delete"      onclick="deleteUser('${u.id}','${u.username}')">🗑️</button>
+        <button class="btn-grant-title" onclick="openGrantTitle('${u.id}','${escAttr(u.username)}')">🏆 Cấp Danh Hiệu</button>
+        <button class="btn-add-coin"    onclick="openAddCoin('${u.id}','${escAttr(u.username)}')">💰 Bơm Tiền</button>
+        <button class="btn-delete"      onclick="deleteUser('${u.id}','${escAttr(u.username)}')">🗑️</button>
       </div>
     </div>`;
   }).join("");
@@ -484,7 +502,7 @@ async function loadAdminCards() {
       <div style="font-size:0.72rem;color:rgba(240,230,255,0.35);margin-bottom:8px">${card.time}</div>
       ${card.status === "pending" ? `
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn-approve-card" onclick="approveCard('${card.id}','${card.uid}',${card.denom},'${card.type}','${card.username}')">✅ Duyệt</button>
+          <button class="btn-approve-card" onclick="approveCard('${card.id}','${card.uid}',${card.denom},'${escAttr(card.type)}','${escAttr(card.username)}')">✅ Duyệt</button>
           <button class="btn-reject-card"  onclick="rejectCard('${card.id}')">❌ Từ Chối</button>
         </div>` : ""}
     </div>`).join("");
