@@ -11,23 +11,35 @@ import {
   updateDoc, deleteDoc, query, where, orderBy, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 // =========================================================================
-// BẢO MẬT ĐỈNH CAO: KHÔNG LO ĐƠ NÚT - CHẶN HACKER TUYỆT ĐỐI
+// HOÀN HẢO: BẢO MẬT KHÔNG ĐƠ NÚT (HỢP NHẤT LOCK CHƠI TRÊN DOM)
 // =========================================================================
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// Lưu lại toàn bộ giao diện gốc của Admin vào bộ nhớ ngầm
+const originalAdminHTML = document.body.innerHTML;
+
+// Xóa sạch màn hình ngay lập tức để hacker không kịp nhìn thấy gì
+document.body.innerHTML = `<div style="background:#1a0a2e; color:#f0e6ff; text-align:center; padding-top:20vh; height:100vh; font-family:sans-serif;"><h2>🔒 ĐANG XÁC THỰC QUYỀN ADMIN...</h2></div>`;
 
 onAuthStateChanged(auth, (user) => {
   const ADMIN_UID = "dZ1j9g4vVcSDlGDtRIEkQlY7Vbt1";
   
   if (!user || user.uid !== ADMIN_UID) {
-    // Nếu là hacker: Trục xuất ngay lập tức
+    // Kẻ giả mạo: Đá văng ngay lập tức
     window.location.href = "index.html";
   } else {
-    // Nếu là Admin thật: Hiện hình giao diện và mở khóa nút bấm chạy tanh tách!
-    document.body.style.setProperty("opacity", "1", "important");
-    document.body.style.setProperty("pointer-events", "auto", "important");
-    console.log("Welcome Admin! Giao diện đã mở khóa hoàn toàn.");
+    // Admin thật: Trả lại toàn bộ giao diện gốc nguyên vẹn
+    document.body.innerHTML = originalAdminHTML;
+    console.log("Xác thực Admin thành công. Hệ thống chuẩn bị kích hoạt...");
+    
+    // ĐOẠN QUAN TRỌNG: Bạn tìm xem các hàm tải dữ liệu cũ trong admin.js tên là gì 
+    // (Ví dụ: loadCards(), renderThongKe(),...) thì gọi nó chạy ở ngay dưới đây:
+    if (typeof loadCards === "function") loadCards();
+    if (typeof loadOrders === "function") loadOrders();
+    // Khởi chạy lại các sự kiện thiết lập nút bấm nếu có...
   }
 });
+// =========================================================================
 // =========================================================================
 // =========================================================================
 // =========================================================================
