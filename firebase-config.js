@@ -35,3 +35,56 @@ enableIndexedDbPersistence(db).catch((err) => {
 });
 
 export { app, db, auth };
+
+/*
+  ⚠️  FIRESTORE SECURITY RULES – dán vào Firebase Console → Firestore → Rules → Publish
+
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+
+      function isAdmin() {
+        return request.auth != null
+          && request.auth.uid == "REPLACE_WITH_YOUR_ADMIN_UID";
+      }
+      function isOwner(uid) {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      match /users/{uid} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update: if isOwner(uid) || isAdmin();
+        allow delete: if isAdmin();
+      }
+      match /orders/{orderId} {
+        allow read: if isAdmin()
+          || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+      match /cards/{cardId} {
+        allow read: if isAdmin()
+          || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+      match /titlepurchases/{id} {
+        allow read: if isAdmin()
+          || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+      match /fruitstock/{id} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      match /coinlogs/{id} {
+        allow read, write: if isAdmin();
+      }
+    }
+  }
+*/
