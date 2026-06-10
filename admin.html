@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanh Minh Các - Hệ Thống Quản Trị Chủ Shop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-page" style="background: var(--bg-dark); color: var(--text); font-family: 'Quicksand', sans-serif;">
+
+  <header id="header">
+    <div class="header-inner">
+      <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer;">
+        <span style="display:block; font-family:'Exo 2',sans-serif; font-weight:900; background:linear-gradient(45deg, var(--pink), var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">THANH MINH CÁC</span>
+        <span style="font-size:0.75rem; color:var(--gold); letter-spacing:2px;">👑 HỆ THỐNG QUẢN TRỊ PANEL</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="window.location.href='index.html'" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid var(--glass); padding:8px 16px; border-radius:8px; cursor:pointer;">🏠 Về Trang Chủ</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-container" style="padding: 40px 20px; max-width: 1200px; margin: 0 auto;">
+    <h2 style="font-family:'Exo 2',sans-serif; margin-bottom:20px; color:var(--accent);">📋 Danh sách đơn hàng cày thuê cần duyệt</h2>
+    <div id="adminOrderList" class="admin-order-list">
+      </div>
+  </main>
+
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
