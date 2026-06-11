@@ -1,4 +1,3 @@
-cat > /home/claude/tmc-fix/app.js << 'ENDOFFILE_APP'
 /**
  * app.js – Thanh Minh Các
  *
@@ -1301,4 +1300,3 @@ function getDefaultServices(){
     s(87,"Buddha",20000,"fruit","normal","Trái Buddha"),s(88,"Magma",5000,"fruit","normal","Trái Magma")
   ];
 }
-ENDOFFILE_APP
