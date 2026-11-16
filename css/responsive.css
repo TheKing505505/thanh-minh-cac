@@ -1,0 +1,11 @@
+        /* MOBILE */
+        @media(max-width:600px) {
+            .hero h1 { font-size:2.2rem; }
+            .services-cat-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
+            .form-row,.card-form-grid,.order-fields,.admin-card-fields { grid-template-columns:1fr; }
+            .header-actions { gap:5px; }
+            .btn-nav,.btn-logout { font-size:0.7rem; padding:5px 10px; }
+            .modal { padding:20px; }
+            .top-grid { grid-template-columns:repeat(3,1fr); }
+        }
+    
