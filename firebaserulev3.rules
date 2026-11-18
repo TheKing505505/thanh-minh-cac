@@ -1,0 +1,184 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.uid == 'MiiCu1YFHKOwhVcB48OAxR8ImRg2';
+    }
+
+    function ownsUserKey(usernameLower) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(usernameLower))
+        && get(/databases/$(database)/documents/users/$(usernameLower)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(usernameLower)).data.disabled != true;
+    }
+
+    function requestMatchesOwnProfile(usernameLower, username) {
+      return ownsUserKey(usernameLower)
+        && get(/databases/$(database)/documents/users/$(usernameLower)).data.username == username;
+    }
+
+    match /users/{usernameLower} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'usernameLower', 'email', 'facebook',
+          'createdAt', 'createdAtTs', 'balance', 'role', 'titleOverride', 'disabled'
+        ])
+        && request.resource.data.keys().hasAll([
+          'uid', 'username', 'usernameLower', 'email', 'facebook',
+          'createdAt', 'createdAtTs', 'balance', 'role', 'disabled'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.usernameLower == usernameLower
+        && request.resource.data.role == 'user'
+        && request.resource.data.disabled == false
+        && request.resource.data.balance == 0
+        && request.resource.data.username is string
+        && request.resource.data.username.size() >= 2
+        && request.resource.data.username.size() <= 32
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.facebook is string
+        && request.resource.data.facebook.size() <= 256
+        && request.resource.data.createdAtTs is number;
+
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.uid == request.auth.uid
+        && resource.data.disabled != true
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.usernameLower == resource.data.usernameLower
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.balance == resource.data.balance
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'facebook'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.facebook is string
+        && request.resource.data.facebook.size() <= 256
+      );
+
+      // Admin dùng disabled=true (soft disable); không xóa hồ sơ và lịch sử.
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && requestMatchesOwnProfile(request.resource.data.usernameLower, request.resource.data.username)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.usernameLower is string
+        && request.resource.data.id == orderId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.origPrice is number
+        && request.resource.data.origPrice >= 0
+        && request.resource.data.account is string
+        && request.resource.data.account.size() > 0
+        && request.resource.data.account.size() <= 128
+        && request.resource.data.serviceName is string
+        && request.resource.data.serviceName.size() <= 128
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 1000
+        && request.resource.data.passwordProvidedSeparately == true
+        && request.resource.data.timestamp is number
+        && request.resource.data.keys().hasAll([
+          'id', 'uid', 'usernameLower', 'username', 'serviceId', 'serviceName', 'serviceCode',
+          'price', 'origPrice', 'discountInfo', 'subOption', 'account', 'passwordProvidedSeparately',
+          'note', 'time', 'timestamp', 'status', 'doneTime', 'doneMessage'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'uid', 'usernameLower', 'username', 'serviceId', 'serviceName', 'serviceCode',
+          'price', 'origPrice', 'discountInfo', 'subOption', 'account', 'passwordProvidedSeparately',
+          'note', 'time', 'timestamp', 'status', 'doneTime', 'doneMessage'
+        ]);
+      allow update, delete: if isAdmin();
+    }
+
+    match /cards/{cardId} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && requestMatchesOwnProfile(request.resource.data.usernameLower, request.resource.data.username)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.id == cardId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.denom is number
+        && request.resource.data.denom > 0
+        && request.resource.data.denom <= 500000
+        && request.resource.data.username is string
+        && request.resource.data.username.size() <= 64
+        && request.resource.data.usernameLower is string
+        && request.resource.data.type is string
+        && request.resource.data.type.size() <= 32
+        && request.resource.data.serial is string
+        && request.resource.data.serial.size() > 0
+        && request.resource.data.serial.size() <= 64
+        && request.resource.data.code is string
+        && request.resource.data.code.size() > 0
+        && request.resource.data.code.size() <= 128
+        && request.resource.data.timestamp is number
+        && request.resource.data.keys().hasAll([
+          'id', 'uid', 'usernameLower', 'username', 'type', 'denom', 'serial', 'code',
+          'time', 'timestamp', 'status', 'note'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'uid', 'usernameLower', 'username', 'type', 'denom', 'serial', 'code',
+          'time', 'timestamp', 'status', 'note'
+        ]);
+      allow update, delete: if isAdmin();
+    }
+
+    match /titlepurchases/{purchaseId} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && requestMatchesOwnProfile(request.resource.data.usernameLower, request.resource.data.username)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.username is string
+        && request.resource.data.usernameLower is string
+        && request.resource.data.titleId is string
+        && request.resource.data.titleId.size() <= 64
+        && request.resource.data.titleName is string
+        && request.resource.data.titleName.size() <= 128
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.origPrice is number
+        && request.resource.data.origPrice >= 0
+        && request.resource.data.renewalType in ['new', 'early', 'grace', 'full']
+        && request.resource.data.timestamp is number
+        && request.resource.data.keys().hasAll([
+          'uid', 'usernameLower', 'username', 'titleId', 'titleName', 'price', 'origPrice',
+          'renewalType', 'time', 'timestamp', 'status'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'usernameLower', 'username', 'titleId', 'titleName', 'price', 'origPrice',
+          'renewalType', 'time', 'timestamp', 'status'
+        ]);
+      allow update, delete: if isAdmin();
+    }
+
+    match /fruitstock/{stockId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /coinlogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /system_configs/{configId} {
+      allow read: if isAdmin() || configId in [
+        'storefront_services', 'storefront_categories', 'storefront_settings', 'storefront_discount_codes'
+      ];
+      allow write: if isAdmin();
+    }
+
+    // Deny-by-default: all other collections are inaccessible.
+  }
+}
