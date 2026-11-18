@@ -1,0 +1,86 @@
+/* Admin and card-management component styles. */
+        /* ADMIN */
+        .admin-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+        .admin-tab { padding:8px 16px; border-radius:20px; border:1px solid rgba(196,77,255,0.25); background:transparent; color:rgba(240,230,255,0.6); cursor:pointer; font-size:0.8rem; font-weight:600; font-family:'Quicksand',sans-serif; transition:all 0.2s; }
+        .admin-tab.active { background:linear-gradient(135deg,var(--pink),var(--purple)); color:#fff; border-color:transparent; }
+        .admin-section { display:none; }
+        .admin-section.show { display:block; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-bottom:20px; }
+        .stat-card { background:var(--bg-card); border:1px solid rgba(196,77,255,0.15); border-radius:12px; padding:14px; text-align:center; }
+        .stat-card .val { font-family:'Orbitron',sans-serif; font-size:1.4rem; font-weight:700; color:var(--gold); }
+        .stat-card .lbl { font-size:0.68rem; color:rgba(240,230,255,0.45); margin-top:4px; }
+        .admin-order-card { background:var(--bg-card); border:1px solid rgba(255,107,157,0.12); border-radius:12px; padding:14px; margin-bottom:10px; }
+        .admin-order-card.done { border-color:rgba(74,222,128,0.15); }
+        .order-status-badge { padding:3px 10px; border-radius:8px; font-size:0.72rem; font-weight:700; display:inline-block; margin-bottom:8px; }
+        .order-status-badge.done { background:rgba(74,222,128,0.15); color:var(--green); }
+        .order-status-badge.pending { background:rgba(255,215,0,0.1); color:var(--gold); }
+        .order-fields { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; }
+        .order-field { background:rgba(255,255,255,0.04); border-radius:8px; padding:6px 10px; font-size:0.78rem; }
+        .order-field span { color:rgba(240,230,255,0.4); }
+        .order-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .btn-done-order { padding:7px 14px; border-radius:8px; border:none; background:linear-gradient(135deg,var(--green),#22c55e); color:#000; cursor:pointer; font-size:0.78rem; font-weight:700; font-family:'Quicksand',sans-serif; transition:all 0.2s; }
+        .btn-notify-order { padding:7px 14px; border-radius:8px; border:1px solid rgba(196,77,255,0.3); background:transparent; color:var(--accent); cursor:pointer; font-size:0.78rem; font-weight:600; font-family:'Quicksand',sans-serif; }
+        .btn-delete { padding:7px 12px; border-radius:8px; border:1px solid rgba(255,71,87,0.3); background:transparent; color:var(--red); cursor:pointer; font-size:0.78rem; font-weight:600; font-family:'Quicksand',sans-serif; }
+        .user-item { background:var(--bg-card); border:1px solid rgba(255,107,157,0.12); border-radius:12px; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .user-item-info { flex:1; }
+        .user-item-name { font-weight:700; margin-bottom:3px; }
+        .user-item-sub { font-size:0.72rem; color:rgba(240,230,255,0.45); }
+        .user-item-actions { display:flex; gap:6px; flex-wrap:wrap; }
+        .btn-grant-title { padding:7px 12px; border-radius:8px; border:1px solid rgba(255,215,0,0.3); background:transparent; color:var(--gold); cursor:pointer; font-size:0.75rem; font-weight:600; font-family:'Quicksand',sans-serif; }
+        .btn-add-coin { padding:7px 12px; border-radius:8px; border:none; background:linear-gradient(135deg,var(--green),#22c55e); color:#000; cursor:pointer; font-size:0.75rem; font-weight:700; font-family:'Quicksand',sans-serif; }
+        .user-balance { font-size:0.72rem; color:var(--green); margin-top:3px; font-weight:700; }
+        /* MODAL BƠM TIỀN */
+        .coin-modal-num { font-family:'Orbitron',sans-serif; font-size:1.4rem; color:var(--gold); font-weight:700; text-align:center; margin:10px 0; }
+        .user-item-title { padding:2px 8px; border-radius:8px; font-size:0.7rem; font-weight:700; }
+        .title-option { background:var(--bg-card); border:1px solid rgba(255,107,157,0.15); border-radius:10px; padding:10px; cursor:pointer; margin-bottom:6px; transition:all 0.2s; }
+        .title-option:hover,.title-option.selected { border-color:var(--purple); background:rgba(196,77,255,0.1); }
+        .t-name { font-size:0.82rem; font-weight:700; }
+        .t-min { font-size:0.7rem; color:rgba(240,230,255,0.4); margin-top:3px; }
+        /* ADMIN SERVICE */
+        .admin-add-form { background:rgba(255,255,255,0.03); border:1px solid rgba(196,77,255,0.15); border-radius:12px; padding:16px; margin-bottom:16px; }
+        .admin-add-form h4 { color:var(--accent); margin-bottom:12px; font-size:0.88rem; }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+        .admin-input { width:100%; padding:9px 12px; background:rgba(255,255,255,0.06); border:1px solid rgba(196,77,255,0.2); border-radius:8px; color:var(--text); font-family:'Quicksand',sans-serif; font-size:0.82rem; outline:none; transition:border-color 0.2s; }
+        .admin-input:focus { border-color:var(--purple); }
+        .admin-select { width:100%; padding:9px 12px; background:rgba(26,10,46,0.9); border:1px solid rgba(196,77,255,0.2); border-radius:8px; color:var(--text); font-family:'Quicksand',sans-serif; font-size:0.82rem; outline:none; }
+        .btn-add-svc { width:100%; padding:10px; border-radius:8px; border:none; background:linear-gradient(135deg,var(--pink),var(--purple)); color:#fff; font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; margin-top:10px; transition:opacity 0.2s; }
+        .btn-add-svc:hover { opacity:0.85; }
+        .admin-svc-item { background:var(--bg-card); border:1px solid rgba(255,107,157,0.15); border-radius:10px; padding:12px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+        .admin-svc-info { flex:1; }
+        .admin-svc-name { font-weight:700; font-size:0.88rem; }
+        .admin-svc-code { font-size:0.72rem; color:var(--purple); margin-top:2px; }
+        .admin-svc-price { font-family:'Orbitron',sans-serif; font-size:0.85rem; color:var(--gold); white-space:nowrap; }
+        .btn-edit-svc { padding:6px 10px; border-radius:6px; border:1px solid rgba(196,77,255,0.3); background:transparent; color:var(--accent); cursor:pointer; font-size:0.78rem; }
+        .admin-cat-item { background:var(--bg-card); border:1px solid rgba(255,107,157,0.2); border-radius:10px; padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+        /* DRAG */
+        .svc-drag-row { position:relative; }
+        .svc-row.dragging { opacity:0.4; border:2px dashed var(--purple); }
+        .svc-row.drag-over { border-top:2px solid var(--pink); }
+        .drag-handle { cursor:grab; color:rgba(240,230,255,0.3); font-size:1rem; padding:0 4px; user-select:none; }
+        .drag-handle:hover { color:var(--accent); }
+        /* NẠP THẺ */
+        .card-section { margin-bottom:32px; }
+        .card-types { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+        .card-type-btn { padding:7px 16px; border-radius:20px; border:1px solid rgba(196,77,255,0.25); background:transparent; color:rgba(240,230,255,0.6); cursor:pointer; font-size:0.8rem; font-weight:600; font-family:'Quicksand',sans-serif; transition:all 0.2s; }
+        .card-type-btn.active { background:linear-gradient(135deg,var(--pink),var(--purple)); color:#fff; border-color:transparent; }
+        .card-form { background:var(--bg-card); border:1px solid rgba(196,77,255,0.15); border-radius:14px; padding:20px; }
+        .card-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+        .card-form-label { font-size:0.72rem; color:rgba(240,230,255,0.5); margin-bottom:5px; font-weight:600; letter-spacing:0.05em; display:block; }
+        .card-input { width:100%; padding:10px 12px; background:rgba(255,255,255,0.06); border:1px solid rgba(196,77,255,0.2); border-radius:8px; color:var(--text); font-family:'Quicksand',sans-serif; font-size:0.85rem; outline:none; transition:border-color 0.2s; }
+        .card-input:focus { border-color:var(--purple); }
+        .card-select { width:100%; padding:10px 12px; background:rgba(26,10,46,0.95); border:1px solid rgba(196,77,255,0.2); border-radius:8px; color:var(--text); font-family:'Quicksand',sans-serif; font-size:0.85rem; outline:none; }
+        .btn-submit-card { width:100%; padding:12px; border-radius:10px; border:none; background:linear-gradient(135deg,var(--green),#22c55e); color:#000; font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s; }
+        .btn-submit-card:hover { opacity:0.85; transform:scale(1.01); }
+        .btn-submit-card:disabled { background:rgba(255,255,255,0.1); color:rgba(240,230,255,0.3); cursor:not-allowed; transform:none; }
+        .card-history-item { background:rgba(255,255,255,0.04); border:1px solid rgba(74,222,128,0.12); border-radius:10px; padding:12px; margin-bottom:8px; }
+        .card-status-badge { padding:2px 8px; border-radius:8px; font-size:0.7rem; font-weight:700; }
+        .card-status-pending { background:rgba(255,215,0,0.1); color:var(--gold); }
+        .card-status-done { background:rgba(74,222,128,0.1); color:var(--green); }
+        .card-status-failed { background:rgba(255,71,87,0.1); color:var(--red); }
+        /* ADMIN NẠP THẺ */
+        .admin-card-item { background:var(--bg-card); border:1px solid rgba(74,222,128,0.15); border-radius:10px; padding:14px; margin-bottom:8px; }
+        .admin-card-fields { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; }
+        .admin-card-field { background:rgba(255,255,255,0.04); border-radius:6px; padding:5px 10px; font-size:0.78rem; }
+        .admin-card-field span { color:rgba(240,230,255,0.4); }
+        .btn-approve-card { padding:7px 14px; border-radius:8px; border:none; background:linear-gradient(135deg,var(--green),#22c55e); color:#000; cursor:pointer; font-size:0.78rem; font-weight:700; font-family:'Quicksand',sans-serif; }
+        .btn-reject-card { padding:7px 14px; border-radius:8px; border:1px solid rgba(255,71,87,0.3); background:transparent; color:var(--red); cursor:pointer; font-size:0.78rem; font-weight:600; font-family:'Quicksand',sans-serif; }

@@ -1,0 +1,205 @@
+// ============================================================
+// ===== USER SYSTEM =====
+// ============================================================
+let _pendingRegistrationUid = null;
+let _registrationInProgress = false;
+
+async function handleRegister() {
+    const username = document.getElementById('regUser').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const facebook = document.getElementById('regFacebook').value.trim();
+    const pass = document.getElementById('regPass').value;
+    const pass2 = document.getElementById('regPass2').value;
+    const regBtn = document.getElementById('regSubmitBtn');
+    const showRegErr = msg => {
+        let el = document.getElementById('regErrorMsg');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'regErrorMsg';
+            el.style.cssText = 'background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.4);border-radius:10px;padding:8px 14px;font-size:0.8rem;color:var(--red);font-weight:600;margin-bottom:12px;text-align:center';
+            const btn = document.querySelector('#registerModal .btn-modal-submit');
+            if (btn && btn.parentNode) btn.parentNode.insertBefore(el, btn);
+        }
+        el.textContent = '❌ ' + msg;
+        el.style.display = 'block';
+    };
+    const clearRegErr = () => { const el = document.getElementById('regErrorMsg'); if (el) el.style.display = 'none'; };
+    clearRegErr();
+
+    if (!username || username.length < 2 || username.length > 32 || username.includes('/')) {
+        showRegErr('Tên hiển thị phải từ 2–32 ký tự và không chứa dấu /.'); return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showRegErr('Email hợp lệ là bắt buộc để tạo tài khoản bảo mật.'); return;
+    }
+    if (pass.length < 6) { showRegErr('Mật khẩu ít nhất 6 ký tự!'); return; }
+    if (pass !== pass2) { showRegErr('Mật khẩu nhập lại không khớp!'); return; }
+    if (username.toLowerCase() === ADMIN_USER.toLowerCase()) { showRegErr('Tên này không được phép dùng!'); return; }
+    if (!auth || !db) { showRegErr('Firebase chưa khởi tạo. Tải lại trang hoặc báo chủ shop.'); return; }
+
+    regBtn.disabled = true;
+    regBtn.textContent = '⏳ Đang đăng ký...';
+    let credential = null;
+    _registrationInProgress = true;
+    try {
+        credential = await auth.createUserWithEmailAndPassword(email, pass);
+        _pendingRegistrationUid = credential.user.uid;
+        const usernameLower = normalizeUsername(username);
+        const profile = {
+            uid: credential.user.uid,
+            username,
+            usernameLower,
+            email,
+            facebook: facebook || '',
+            createdAt: new Date().toLocaleString('vi-VN'),
+            createdAtTs: Date.now(),
+            balance: 0,
+            role: 'user',
+            titleOverride: 'luyen-khi',
+            disabled: false
+        };
+        await saveUserToDB(profile);
+        currentUser = { username, usernameLower, role: 'user', uid: credential.user.uid, email };
+        _pendingRegistrationUid = null;
+        _registrationInProgress = false;
+        clearSession();
+        _usersCache = null;
+        ['regUser','regEmail','regFacebook','regPass','regPass2'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        closeModal('registerModal');
+        showNotif('🎉 Đăng ký và tạo hồ sơ thành công!', 'success');
+        updateNav();
+    } catch (error) {
+        console.error('Register error:', error);
+        _pendingRegistrationUid = null;
+        // Keep the auth observer paused while cleaning up a failed registration.
+        // Nếu tạo Auth được nhưng Firestore profile không tạo được, thu hồi Auth user vừa tạo.
+        if (credential && credential.user) {
+            try { await credential.user.delete(); } catch (cleanupError) {
+                console.error('Không thể thu hồi tài khoản đăng ký lỗi:', cleanupError);
+            }
+        }
+        const messages = {
+            'auth/email-already-in-use': 'Email này đã có tài khoản. Hãy đăng nhập hoặc dùng email khác.',
+            'auth/invalid-email': 'Email không hợp lệ.',
+            'auth/weak-password': 'Mật khẩu quá yếu; hãy dùng ít nhất 6 ký tự.',
+            'auth/operation-not-allowed': 'Firebase Console chưa bật Email/Password.',
+            'permission-denied': 'Firestore Rules từ chối tạo hồ sơ. Hãy Publish firebaserulev1.rules bản 3.0 cho đúng project rồi thử lại.',
+            'firestore/permission-denied': 'Firestore Rules từ chối tạo hồ sơ. Hãy Publish firebaserulev1.rules bản 3.0 cho đúng project rồi thử lại.',
+            'already-exists': 'Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.'
+        };
+        showRegErr(messages[error.code] || error.message || 'Không thể đăng ký. Hãy thử lại.');
+    } finally {
+        _registrationInProgress = false;
+        regBtn.disabled = false;
+        regBtn.textContent = '✦ Đăng Ký';
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('loginUser').value.trim().toLowerCase();
+    const pass = document.getElementById('loginPass').value;
+    if (!email || !pass) { showNotif('Vui lòng nhập email và mật khẩu!', 'error'); return; }
+    if (!email.includes('@')) { showNotif('Từ nay khách đăng nhập bằng email đã đăng ký, không dùng username.', 'error'); return; }
+    if (!auth || !db) { showNotif('Firebase chưa khởi tạo. Hãy tải lại trang.', 'error'); return; }
+
+    const loginBtn = document.getElementById('loginSubmitBtn') || document.querySelector('#loginModal .btn-modal-submit');
+    if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = '⏳ Đang đăng nhập...'; }
+    try {
+        const credential = await auth.signInWithEmailAndPassword(email, pass);
+        const firebaseUser = credential.user;
+        if (!firebaseUser) throw new Error('Firebase không trả về tài khoản đăng nhập.');
+
+        if (firebaseUser.uid === ADMIN_UID) {
+            currentUser = { username: ADMIN_USER, usernameLower: normalizeUsername(ADMIN_USER), role: 'admin', uid: firebaseUser.uid, email: firebaseUser.email };
+            clearSession();
+            closeModal('loginModal');
+            showNotif('Đăng nhập quản trị thành công!', 'success');
+            updateNav();
+            // Firebase onAuthStateChanged sẽ khôi phục bảng quản trị sau khi xác thực xong.
+            return;
+        }
+
+        const profile = await getUserProfileByUid(firebaseUser.uid);
+        if (!profile || profile.disabled) {
+            await auth.signOut();
+            currentUser = null;
+            throw new Error(profile && profile.disabled
+                ? 'Tài khoản đã bị chủ shop vô hiệu hóa. Hãy liên hệ shop.'
+                : 'Tài khoản Auth chưa có hồ sơ khách trong Firestore. Hãy đăng ký lại hoặc liên hệ shop.');
+        }
+        currentUser = { username: profile.username, usernameLower: profile.usernameLower, role: 'user', uid: firebaseUser.uid, email: firebaseUser.email };
+        clearSession();
+        _usersCache = null;
+        closeModal('loginModal');
+        showNotif(`👋 Chào ${profile.username}! 🎮`, 'success');
+        updateNav();
+    } catch (error) {
+        console.error('Login error:', error);
+        const messages = {
+            'auth/invalid-email': 'Email không hợp lệ.',
+            'auth/user-not-found': 'Không tìm thấy tài khoản Firebase.',
+            'auth/wrong-password': 'Mật khẩu không đúng.',
+            'auth/invalid-credential': 'Email hoặc mật khẩu không đúng.',
+            'auth/email-already-in-use': 'Email đã được sử dụng.',
+            'auth/too-many-requests': 'Đăng nhập tạm thời bị giới hạn. Hãy thử lại sau.',
+            'auth/configuration-not-found': 'Firebase Authentication chưa được cấu hình trên đúng project.',
+            'permission-denied': 'Firestore Rules từ chối đọc hồ sơ. Kiểm tra UID và Rules phiên bản 3.0.',
+            'firestore/permission-denied': 'Firestore Rules từ chối đọc hồ sơ. Kiểm tra UID và Rules phiên bản 3.0.'
+        };
+        showNotif(messages[error.code] || error.message || 'Lỗi đăng nhập, thử lại!', 'error');
+    } finally {
+        if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = '✦ Đăng Nhập'; }
+    }
+}
+
+async function logoutUser(){
+    stopOrderListener();
+    if(auth && auth.currentUser){ try { await auth.signOut(); } catch(e) { console.warn('Auth signOut:',e); } }
+    currentUser=null;
+    clearSession();
+    // Reset để lần đăng nhập tiếp theo luôn đọc từ Firestore
+    _useLocalStorage=false;
+    _usersCache=null;
+    showNotif('Đã đăng xuất','info');
+    updateNav();
+    showHome();
+}
+
+async function updateNav() {
+    const isUser=currentUser&&currentUser.role==='user';
+    const isAdmin=currentUser&&currentUser.role==='admin';
+    document.getElementById('navLoginBtn').style.display=currentUser?'none':'';
+    document.getElementById('navRegisterBtn').style.display=currentUser?'none':'';
+    document.getElementById('navLogoutBtn').style.display=currentUser?'':'none';
+    document.getElementById('navHistoryBtn').style.display=isUser?'':'none';
+    document.getElementById('navCardBtn').style.display=isUser?'':'none';
+    document.getElementById('navAdminBtn').style.display=isAdmin?'':'none';
+    document.getElementById('navUserBadge').style.display=isUser?'':'none';
+    if(isUser){
+        document.getElementById('navAvatar').textContent=currentUser.username[0].toUpperCase();
+        document.getElementById('navUsername').textContent=currentUser.username;
+        try{
+            const user=await findUserInDB(currentUser.username);
+            const title=user&&user.titleOverride?TITLES.find(t=>t.id===user.titleOverride):null;
+            const navBadge=document.getElementById('navTitleBadge');
+            if(title&&DH_LOGOS[title.id]){
+                navBadge.innerHTML=`<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:20px;height:20px;vertical-align:middle">${DH_LOGOS[title.id].replace(/width="64"/,'width="20"').replace(/height="72"/,'height="20"')}</span>${title.name}</span>`;
+            } else {
+                navBadge.textContent=title?title.icon+' '+title.name:'';
+            }
+        } catch(e){}
+    }
+    renderServices();
+    loadSocialProof();
+    loadTopCustomers();
+    // Bắt đầu listener nếu là user
+    if (currentUser && currentUser.role === 'user') {
+        startOrderListener(currentUser.uid);
+        startCustomerDataListeners(currentUser.uid, currentUser.usernameLower);
+    } else {
+        stopCustomerDataListeners();
+    }
+    applyVideoSetting();
+}
