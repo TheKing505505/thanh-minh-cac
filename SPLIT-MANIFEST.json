@@ -1,0 +1,43 @@
+{
+  "source_file": "webv0(2).html",
+  "source_lines": 3622,
+  "notes": [
+    "CSS was split into contiguous ranges to preserve stylesheet order.",
+    "JavaScript is classic-script code to preserve global inline event handlers.",
+    "Top-level mutable state declarations were centralized in js/core/state.js.",
+    "No business-logic rewrite was intended.",
+    "v2 (bảo mật): thêm Firebase Auth, firestore.rules mới, escape XSS, CSP, mã hoá mật khẩu Roblox. Xem README.md."
+  ],
+  "script_load_order": [
+    "js/core/security.js",
+    "js/firebase/init.js",
+    "js/config/constants.js",
+    "js/config/catalog.js",
+    "js/config/title-logos.js",
+    "js/data/titles.js",
+    "js/core/state.js",
+    "js/core/storage.js",
+    "js/core/helpers.js",
+    "js/data/users.js",
+    "js/data/orders.js",
+    "js/data/cards.js",
+    "js/data/wallet.js",
+    "js/data/public-stats.js",
+    "js/data/fruit-stock.js",
+    "js/features/auth.js",
+    "js/features/storefront.js",
+    "js/features/orders.js",
+    "js/features/profile-history.js",
+    "js/features/card-topup.js",
+    "js/features/titles.js",
+    "js/admin/dashboard.js",
+    "js/admin/users.js",
+    "js/admin/orders.js",
+    "js/admin/services.js",
+    "js/admin/cards.js",
+    "js/admin/titles.js",
+    "js/admin/settings-stock.js",
+    "js/admin/encryption.js",
+    "js/app.js"
+  ]
+}
