@@ -10,11 +10,11 @@ let auth = null;
         if (!firebase.apps.length) {
             firebase.initializeApp({
                 apiKey: "AIzaSyBgZncJBGRrJI1DobylcIwiS1CHXvbDjQo",
-                authDomain: "thanh-minh-cac.firebaseapp.com",
-                projectId: "thanh-minh-cac",
+                authDomain: "thanh-minh-cac-41666.firebaseapp.com",
+                projectId: "thanh-minh-cac-41666",
                 storageBucket: "thanh-minh-cac.firebasestorage.app",
-                messagingSenderId: "872838076122",
-                appId: "1:872838076122:web:1d4b5f6839c4fbcb61f7e3"
+                messagingSenderId: "646917525177",
+                appId: "1:646917525177:web:499798730e45509e899568"
             });
         }
         auth = firebase.auth();
